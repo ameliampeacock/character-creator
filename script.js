@@ -1,18 +1,44 @@
 // ====================================================================
 // SETTINGS
 // ====================================================================
-const SPRITE_PATH = "sprites/races/human_female.svg";
+const SPRITE_DIR = "sprites/body/";
 
+// The character is drawn on the body's 120x120 grid. This crops the
+// empty space around it.
+const VIEWBOX = "24 0 72 120";
+
+// Every body file puts the top of the neck here (x = center, y = top).
+const NECK = { x: 60, y: 42 };
+
+// How far the neck tucks up under the chin, in pixels.
+const NECK_OVERLAP = 0;
+
+// ---- Shape pickers -------------------------------------------------
+// "toggle" pickers are combined to make the body file name, e.g.
+// female-thin-weak.svg. "style" pickers step through numbered files,
+// e.g. eye-1.svg ... eye-5.svg.
+const PICKERS = {
+  sex:      { label: "Body",     type: "toggle", options: [["female", "Female"], ["male", "Male"]], start: 0 },
+  build:    { label: "Build",    type: "toggle", options: [["thin", "Thin"], ["large", "Large"]],   start: 0 },
+  strength: { label: "Strength", type: "toggle", options: [["weak", "Weak"], ["strong", "Strong"]], start: 0 },
+  face:     { label: "Hair",     type: "style",  file: "face",  count: 8, start: 0 },
+  eye:      { label: "Eyes",     type: "style",  file: "eye",   count: 5, start: 0 },
+  nose:     { label: "Nose",     type: "style",  file: "nose",  count: 5, start: 0 },
+  mouth:    { label: "Mouth",    type: "style",  file: "mouth", count: 5, start: 0 },
+};
+
+// ---- Color sliders -------------------------------------------------
 // Each part has:
-//   original: the colors in the SVG, in class order (skin-0, skin-1, ...).
-//             The first one is the "base" color; the rest are its shading.
+//   original: the colors used in the SVG files. The first one is the
+//             "base" color; the rest are its shading. Any shape in any
+//             file with one of these colors gets recolored.
 //   palette:  the colors the slider steps through. Only the base color is
 //             listed; shading is calculated to match.
 //   start:    which palette entry the slider starts on.
 const PARTS = {
   skin: {
     label: "Skin",
-    original: ["#F3BD94", "#DFA17A", "#D58962", "#D47360", "#C47A52", "#906247"],
+    original: ["#F3BD94", "#D58962"],
     palette: [
       ["Porcelain", "#F9DCCB"],
       ["Peach",     "#F3BD94"],
@@ -27,11 +53,11 @@ const PARTS = {
   },
   hair: {
     label: "Hair",
-    original: ["#42251A", "#27120A", "#5B2B1A", "#984D2B"],
+    original: ["#7E3E0D"],
     palette: [
       ["Black",      "#1E1916"],
       ["Dark brown", "#42251A"],
-      ["Brown",      "#6B4128"],
+      ["Brown",      "#7E3E0D"],
       ["Auburn",     "#8A3A1E"],
       ["Ginger",     "#B8561F"],
       ["Blonde",     "#C9A25C"],
@@ -40,37 +66,36 @@ const PARTS = {
       ["Pink",       "#D56A9A"],
       ["Blue",       "#3E5FA8"],
     ],
-    start: 1,
+    start: 2,
   },
   iris: {
     label: "Eyes",
-    original: ["#234C7F"],
+    original: ["#3662F3", "#152F83"],
     palette: [
-      ["Brown",      "#5A3A22"],
-      ["Hazel",      "#7A6A2E"],
-      ["Amber",      "#B07A1E"],
-      ["Green",      "#3F7A45"],
-      ["Blue",       "#234C7F"],
-      ["Light blue", "#5E9BD1"],
-      ["Grey",       "#7C8793"],
-      ["Violet",     "#6B4A9E"],
+      ["Brown",      "#7A4A26"],
+      ["Hazel",      "#8C7A32"],
+      ["Amber",      "#C98A1E"],
+      ["Green",      "#3F9A4F"],
+      ["Blue",       "#3662F3"],
+      ["Light blue", "#6FAEE6"],
+      ["Grey",       "#8A96A3"],
+      ["Violet",     "#7E57C2"],
     ],
     start: 4,
   },
-  bikini: {
-    label: "Bikini",
-    original: ["#F1F1F1", "#CECED4"],
+  clothes: {
+    label: "Clothes",
+    original: ["#DD6F6F"],
     palette: [
+      ["Rose",   "#DD6F6F"],
       ["White",  "#F1F1F1"],
       ["Black",  "#2B2B30"],
       ["Red",    "#C8323C"],
-      ["Coral",  "#F07A63"],
       ["Yellow", "#F2C94C"],
       ["Green",  "#3FA36B"],
       ["Teal",   "#2A9D9A"],
       ["Blue",   "#3B6FD1"],
       ["Purple", "#7E57C2"],
-      ["Pink",   "#E86FA8"],
     ],
     start: 0,
   },
@@ -128,12 +153,182 @@ function makeShades(originals, newBase) {
   });
 }
 
+// Original hex -> CSS variable, e.g. "#D58962" -> "var(--skin-1)"
+const COLOR_VARS = {};
+for (const key in PARTS) {
+  PARTS[key].original.forEach((hex, i) => {
+    COLOR_VARS[hex.toUpperCase()] = `var(--${key}-${i})`;
+  });
+}
+
 // ====================================================================
-// SLIDERS
+// BUILDING THE CHARACTER
 // ====================================================================
+const SVG_NS = "http://www.w3.org/2000/svg";
 const root = document.documentElement;
 const $ = (id) => document.getElementById(id);
 
+// Each SVG file is only downloaded once.
+const fileCache = {};
+function loadFile(name) {
+  if (!fileCache[name]) {
+    fileCache[name] = fetch(SPRITE_DIR + name).then((res) => {
+      if (!res.ok) throw new Error(`${name}: ${res.status}`);
+      return res.text();
+    });
+  }
+  return fileCache[name];
+}
+
+// Turn SVG text into a <g> holding its shapes, with recolorable fills
+// pointed at CSS variables.
+function toGroup(svgText) {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const g = document.createElementNS(SVG_NS, "g");
+  for (const child of [...doc.documentElement.children]) {
+    g.appendChild(document.importNode(child, true));
+  }
+  for (const el of g.querySelectorAll("[fill]")) {
+    const v = COLOR_VARS[el.getAttribute("fill").toUpperCase()];
+    if (v) el.style.fill = v;
+  }
+  return g;
+}
+
+// The head is the biggest skin-colored shape in the face file.
+function findHead(faceGroup) {
+  let best = null;
+  for (const el of faceGroup.querySelectorAll("[fill]")) {
+    if (el.style.fill !== "var(--skin-0)") continue;
+    const box = el.getBBox();
+    if (!best || box.width * box.height > best.width * best.height) best = box;
+  }
+  return best;
+}
+
+function fileNames() {
+  const pick = (key) => {
+    const p = PICKERS[key];
+    return p.type === "toggle" ? p.options[p.value][0] : `${p.file}-${p.value + 1}.svg`;
+  };
+  return {
+    body:  `${pick("sex")}-${pick("build")}-${pick("strength")}.svg`,
+    face:  pick("face"),
+    eye:   pick("eye"),
+    nose:  pick("nose"),
+    mouth: pick("mouth"),
+  };
+}
+
+let drawId = 0;
+async function drawCharacter() {
+  const id = ++drawId;
+  const files = fileNames();
+  let texts;
+  try {
+    texts = await Promise.all(Object.values(files).map(loadFile));
+  } catch (err) {
+    $("sprite-error").textContent =
+      `Couldn't load the sprites (${err.message}). If you opened index.html by ` +
+      `double-clicking it, run it with a local server instead (e.g. VS Code's Live Server).`;
+    $("sprite-error").hidden = false;
+    return;
+  }
+  if (id !== drawId) return; // a newer click already started drawing
+
+  const [body, face, eye, nose, mouth] = texts.map(toGroup);
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", VIEWBOX);
+  svg.setAttribute("shape-rendering", "crispEdges");
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Your character");
+
+  // Layer order, back to front:
+  //   face  (hair + head) — behind the body so long hair falls behind the shoulders
+  //   body
+  //   eyes, nose, mouth  — on top of the head
+  const features = document.createElementNS(SVG_NS, "g");
+  features.append(eye, nose, mouth);
+  svg.append(face, body, features);
+
+  const stage = $("sprite");
+  stage.replaceChildren(svg);
+  $("sprite-error").hidden = true;
+
+  // Line the head's chin up with the top of the neck...
+  const head = findHead(face);
+  const dx = NECK.x - (head.x + head.width / 2);
+  const dy = NECK.y + NECK_OVERLAP - (head.y + head.height);
+  face.setAttribute("transform", `translate(${dx} ${dy})`);
+
+  // ...and put the eye/nose/mouth files (20x20, same size as the head)
+  // right on top of the head.
+  features.setAttribute("transform", `translate(${head.x + dx} ${head.y + dy})`);
+}
+
+// ====================================================================
+// SHAPE PICKERS
+// ====================================================================
+function setPicker(key, value) {
+  const p = PICKERS[key];
+  const n = p.type === "toggle" ? p.options.length : p.count;
+  p.value = ((value % n) + n) % n;
+  if (p.type === "toggle") {
+    p.buttons.forEach((b, i) => b.setAttribute("aria-pressed", i === p.value));
+  } else {
+    p.output.textContent = `${p.value + 1} / ${p.count}`;
+  }
+}
+
+function buildPickers() {
+  const container = $("pickers");
+  for (const key in PICKERS) {
+    const p = PICKERS[key];
+    const wrap = document.createElement("div");
+    wrap.className = "control picker";
+    const label = document.createElement("span");
+    label.className = "picker-label";
+    label.textContent = p.label;
+    wrap.appendChild(label);
+
+    if (p.type === "toggle") {
+      const group = document.createElement("div");
+      group.className = "toggle";
+      group.setAttribute("role", "group");
+      group.setAttribute("aria-label", p.label);
+      p.buttons = p.options.map(([, text], i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = text;
+        b.addEventListener("click", () => { setPicker(key, i); drawCharacter(); });
+        group.appendChild(b);
+        return b;
+      });
+      wrap.appendChild(group);
+    } else {
+      const stepper = document.createElement("div");
+      stepper.className = "stepper";
+      stepper.innerHTML = `
+        <button type="button" class="arrow" aria-label="Previous ${p.label.toLowerCase()}">&#8249;</button>
+        <output aria-live="polite"></output>
+        <button type="button" class="arrow" aria-label="Next ${p.label.toLowerCase()}">&#8250;</button>
+      `;
+      const [prev, next] = stepper.querySelectorAll("button");
+      p.output = stepper.querySelector("output");
+      prev.addEventListener("click", () => { setPicker(key, p.value - 1); drawCharacter(); });
+      next.addEventListener("click", () => { setPicker(key, p.value + 1); drawCharacter(); });
+      wrap.appendChild(stepper);
+    }
+
+    container.appendChild(wrap);
+    setPicker(key, p.start);
+  }
+}
+
+// ====================================================================
+// COLOR SLIDERS
+// ====================================================================
 function applyPart(key) {
   const part = PARTS[key];
   const [name, base] = part.palette[part.slider.value];
@@ -167,28 +362,32 @@ function buildSliders() {
   }
 }
 
+// ====================================================================
+// RANDOMIZE / RESET
+// ====================================================================
+const randomIndex = (n) => Math.floor(Math.random() * n);
+
+$("randomize").addEventListener("click", () => {
+  for (const key in PICKERS) {
+    const p = PICKERS[key];
+    setPicker(key, randomIndex(p.type === "toggle" ? p.options.length : p.count));
+  }
+  for (const key in PARTS) {
+    PARTS[key].slider.value = randomIndex(PARTS[key].palette.length);
+    applyPart(key);
+  }
+  drawCharacter();
+});
+
 $("reset").addEventListener("click", () => {
+  for (const key in PICKERS) setPicker(key, PICKERS[key].start);
   for (const key in PARTS) {
     PARTS[key].slider.value = PARTS[key].start;
     applyPart(key);
   }
+  drawCharacter();
 });
 
-// ====================================================================
-// LOAD THE SVG INTO THE PAGE
-// ====================================================================
-async function loadSprite() {
-  try {
-    const res = await fetch(SPRITE_PATH);
-    if (!res.ok) throw new Error(`${res.status}`);
-    $("sprite").innerHTML = await res.text();
-  } catch (err) {
-    $("sprite-error").textContent =
-      `Couldn't load ${SPRITE_PATH}. If you opened index.html by double-clicking it, ` +
-      `run it with a local server instead (e.g. VS Code's Live Server).`;
-    $("sprite-error").hidden = false;
-  }
-}
-
+buildPickers();
 buildSliders();
-loadSprite();
+drawCharacter();

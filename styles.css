@@ -15,27 +15,6 @@ html, body {
   color: var(--ink);
 }
 
-/* ---- Sprite part colors ------------------------------------------
-   Each class matches a group of shapes in the SVG.
-   script.js sets the variables; the hex after the comma is the
-   original color, used until the script runs. */
-.skin-0 { fill: var(--skin-0, #F3BD94); }
-.skin-1 { fill: var(--skin-1, #DFA17A); }
-.skin-2 { fill: var(--skin-2, #D58962); }
-.skin-3 { fill: var(--skin-3, #D47360); }
-.skin-4 { fill: var(--skin-4, #C47A52); }
-.skin-5 { fill: var(--skin-5, #906247); }
-
-.hair-0 { fill: var(--hair-0, #42251A); }
-.hair-1 { fill: var(--hair-1, #27120A); }
-.hair-2 { fill: var(--hair-2, #5B2B1A); }
-.hair-3 { fill: var(--hair-3, #984D2B); }
-
-.iris-0 { fill: var(--iris-0, #234C7F); }
-
-.bikini-0 { fill: var(--bikini-0, #F1F1F1); }
-.bikini-1 { fill: var(--bikini-1, #CECED4); }
-
 /* ---- Split screen ---------------------------------------------- */
 .layout {
   display: grid;
@@ -56,6 +35,7 @@ html, body {
   height: min(80vh, 700px);
   width: auto;
   display: block;
+  image-rendering: pixelated;
 }
 
 .error {
@@ -69,7 +49,7 @@ html, body {
   padding: 3rem clamp(1.5rem, 5vw, 4rem);
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: safe center;
   gap: 2rem;
   overflow-y: auto;
 }
@@ -80,11 +60,20 @@ h1 {
   font-weight: 600;
 }
 
-#sliders {
+h2 {
+  margin: 0 0 -1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+#sliders,
+#pickers {
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
 }
+
+#pickers { gap: 0.9rem; }
 
 .control {
   display: flex;
@@ -120,8 +109,63 @@ input[type="range"] {
   cursor: pointer;
 }
 
+/* ---- Shape pickers ------------------------------------------- */
+.picker {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.picker-label { color: var(--muted); }
+
+.toggle {
+  display: flex;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.toggle button {
+  border: 0;
+  border-radius: 0;
+  padding: 0.35rem 1rem;
+  min-width: 5.5rem;
+}
+
+.toggle button + button { border-left: 2px solid var(--ink); }
+
+.toggle button[aria-pressed="true"] {
+  background: var(--ink);
+  color: #fff;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stepper output {
+  min-width: 3.5rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.stepper .arrow {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+/* ---- Buttons --------------------------------------------------- */
+.buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
 button {
-  align-self: flex-start;
   font: inherit;
   padding: 0.6rem 1.4rem;
   border: 2px solid var(--ink);
@@ -148,3 +192,5 @@ input:focus-visible {
   .stage { min-height: 60vh; }
   #sprite svg { height: 55vh; }
 }
+
+.toggle button:focus-visible { outline-offset: -5px; }

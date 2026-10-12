@@ -11,17 +11,26 @@
 <body>
   <main class="layout">
 
-    <!-- LEFT: the sprite (the SVG gets loaded into this div) -->
+    <!-- LEFT: the sprite (script.js layers the part SVGs in this div) -->
     <section class="stage" aria-label="Character preview">
       <div id="sprite"></div>
       <p id="sprite-error" class="error" hidden></p>
     </section>
 
-    <!-- RIGHT: the controls (sliders are built by script.js) -->
+    <!-- RIGHT: the controls (pickers and sliders are built by script.js) -->
     <section class="controls" aria-label="Customize your character">
       <h1>Build your character</h1>
+
+      <h2>Shape</h2>
+      <div id="pickers"></div>
+
+      <h2>Colors</h2>
       <div id="sliders"></div>
-      <button type="button" id="reset">Reset</button>
+
+      <div class="buttons">
+        <button type="button" id="randomize">Randomize</button>
+        <button type="button" id="reset">Reset</button>
+      </div>
     </section>
 
   </main>
