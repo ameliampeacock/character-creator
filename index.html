@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Character Creator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="layout">
+
+    <!-- LEFT: the sprite (the SVG gets loaded into this div) -->
+    <section class="stage" aria-label="Character preview">
+      <div id="sprite"></div>
+      <p id="sprite-error" class="error" hidden></p>
+    </section>
+
+    <!-- RIGHT: the controls (sliders are built by script.js) -->
+    <section class="controls" aria-label="Customize your character">
+      <h1>Build your character</h1>
+      <div id="sliders"></div>
+      <button type="button" id="reset">Reset</button>
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

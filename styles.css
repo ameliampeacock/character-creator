@@ -1,0 +1,150 @@
+:root {
+  --ink: #232a3d;
+  --stage-bg: #d9ecf2;
+  --panel-bg: #ffffff;
+  --accent: #3f5bd9;
+  --muted: #6b7288;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Fredoka", system-ui, sans-serif;
+  color: var(--ink);
+}
+
+/* ---- Sprite part colors ------------------------------------------
+   Each class matches a group of shapes in the SVG.
+   script.js sets the variables; the hex after the comma is the
+   original color, used until the script runs. */
+.skin-0 { fill: var(--skin-0, #F3BD94); }
+.skin-1 { fill: var(--skin-1, #DFA17A); }
+.skin-2 { fill: var(--skin-2, #D58962); }
+.skin-3 { fill: var(--skin-3, #D47360); }
+.skin-4 { fill: var(--skin-4, #C47A52); }
+.skin-5 { fill: var(--skin-5, #906247); }
+
+.hair-0 { fill: var(--hair-0, #42251A); }
+.hair-1 { fill: var(--hair-1, #27120A); }
+.hair-2 { fill: var(--hair-2, #5B2B1A); }
+.hair-3 { fill: var(--hair-3, #984D2B); }
+
+.iris-0 { fill: var(--iris-0, #234C7F); }
+
+.bikini-0 { fill: var(--bikini-0, #F1F1F1); }
+.bikini-1 { fill: var(--bikini-1, #CECED4); }
+
+/* ---- Split screen ---------------------------------------------- */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 100%;
+}
+
+.stage {
+  background: var(--stage-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+#sprite svg {
+  height: min(80vh, 700px);
+  width: auto;
+  display: block;
+}
+
+.error {
+  color: #b3261e;
+  text-align: center;
+  max-width: 32ch;
+}
+
+.controls {
+  background: var(--panel-bg);
+  padding: 3rem clamp(1.5rem, 5vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2rem;
+  overflow-y: auto;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+#sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.control-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control label { color: var(--muted); }
+
+.control output {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.swatch {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+button {
+  align-self: flex-start;
+  font: inherit;
+  padding: 0.6rem 1.4rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover { background: var(--ink); color: #fff; }
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+  }
+  .stage { min-height: 60vh; }
+  #sprite svg { height: 55vh; }
+}
